@@ -482,7 +482,7 @@ public abstract class MetaKeyKeyListener {
     public static long handleKeyDown(long state, int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_SHIFT_LEFT || keyCode == KeyEvent.KEYCODE_SHIFT_RIGHT) {
             return press(state, META_SHIFT_ON, META_SHIFT_MASK,
-                    META_CAP_LOCKED, META_CAP_PRESSED, META_CAP_RELEASED, META_CAP_USED);
+                    META_CAP_PRESSED, META_CAP_PRESSED, META_CAP_RELEASED, META_CAP_USED);
         }
 
         if (keyCode == KeyEvent.KEYCODE_ALT_LEFT || keyCode == KeyEvent.KEYCODE_ALT_RIGHT

@@ -308,10 +308,6 @@ public class PowerManagerService extends IPowerManager.Stub
     // power states.
     private boolean mAutoBrightnessButtonKeyboard;
 
-    // Button and keyboard backlights on some devices need the light sensor
-    // always enabled
-    private boolean mAlwaysEnableLightSensor;
-
     // Must match with the ISurfaceComposer constants in C++.
     private static final int ANIM_SETTING_ON = 0x01;
     private static final int ANIM_SETTING_OFF = 0x10;
@@ -697,8 +693,6 @@ public class PowerManagerService extends IPowerManager.Stub
                 com.android.internal.R.bool.config_automatic_brightness_available);
         mAutoBrightnessButtonKeyboard = mUseSoftwareAutoBrightness && resources.getBoolean(
                 com.android.internal.R.bool.config_autoBrightnessButtonKeyboard);
-        mAlwaysEnableLightSensor = resources.getBoolean(
-                com.android.internal.R.bool.config_alwaysEnableLightSensor);
         if (mUseSoftwareAutoBrightness) {
             mAutoBrightnessLevels = resources.getIntArray(
                     com.android.internal.R.array.config_autoBrightnessLevels);
@@ -3514,7 +3508,7 @@ public class PowerManagerService extends IPowerManager.Stub
             Slog.d(TAG, "system ready!");
             mDoneBooting = true;
 
-            enableLightSensorLocked(mUseSoftwareAutoBrightness);
+            enableLightSensorLocked(mUseSoftwareAutoBrightness && mAutoBrightessEnabled);
 
             long identity = Binder.clearCallingIdentity();
             try {
@@ -3693,7 +3687,7 @@ public class PowerManagerService extends IPowerManager.Stub
                     + " mAutoBrightessEnabled=" + mAutoBrightessEnabled
                     + " mWaitingForFirstLightSensor=" + mWaitingForFirstLightSensor);
         }
-        if (!mAutoBrightessEnabled && !mAlwaysEnableLightSensor) {
+        if (!mAutoBrightessEnabled) {
             enable = false;
         }
         if (mSensorManager != null && mLightSensorEnabled != enable) {

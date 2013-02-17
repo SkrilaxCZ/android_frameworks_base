@@ -2420,8 +2420,10 @@ public class PowerManagerService extends IPowerManager.Stub
                     if ((mask & BUTTON_BRIGHT_BIT) != 0) {
                         mButtonLight.setBrightness(target);
                     }
-                    if ((mask & KEYBOARD_BRIGHT_BIT) != 0) {
-                        mKeyboardLight.setBrightness(target);
+                    // Keyboard backlight is synced with display, allow only toggling it on from here
+                    // for cases when keyboard was already visible
+                    if ((mask & KEYBOARD_BRIGHT_BIT) != 0 && target > 0) {
+                        mKeyboardLight.setBrightness(255);
                     }
                     return;
                 }
@@ -3173,6 +3175,8 @@ public class PowerManagerService extends IPowerManager.Stub
                     }
                     userActivity(SystemClock.uptimeMillis(), false, BUTTON_EVENT, true);
                 }
+
+                mKeyboardLight.setBrightness(mKeyboardVisible ? 255 : 0);
             }
         }
     }

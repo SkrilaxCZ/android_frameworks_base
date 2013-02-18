@@ -177,6 +177,12 @@ public class PowerManagerService extends IPowerManager.Stub
     // used for noChangeLights in setPowerState()
     private static final int LIGHTS_MASK        = SCREEN_BRIGHT_BIT | BUTTON_BRIGHT_BIT | KEYBOARD_BRIGHT_BIT;
 
+    // flags for keyboard backlighting
+    private static final int KEYBOARD_LIGHT_ENABLED        = 0x00000001;
+    private static final int KEYBOARD_LIGHT_FOLLOWS_SCREEN = 0x00000002;
+    private static final int KEYBOARD_LIGHT_IGNORE_VALUE   = 0x00000004;
+    private static final int KEYBOARD_LIGHT_IGNORE_MODE    = 0x00000008;
+
     // animate screen lights in PowerManager (as opposed to SurfaceFlinger)
     boolean mAnimateScreenLights = true;
 
@@ -1839,11 +1845,11 @@ public class PowerManagerService extends IPowerManager.Stub
                             when the screen came on */
                         mAutoBrightessEnabled = true;
                         setScreenBrightnessMode(Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL);
+                        updateKeyboardLightState();
                     }
                 } else {
-                    // make sure button and key backlights are off too
+                    // make sure button backlights are off too
                     mButtonLight.turnOff();
-                    mKeyboardLight.turnOff();
                     // clear current value so we will update based on the new conditions
                     // when the sensor is reenabled.
                     mLightSensorValue = -1;
@@ -1855,6 +1861,25 @@ public class PowerManagerService extends IPowerManager.Stub
             }
         }
         return err;
+    }
+
+    private void setKeyboardLightBrightness(int brightness)
+    {
+        int color = brightness & 0x000000ff;
+        color = 0xff000000 | (color << 16) | (color << 8) | color;
+        mKeyboardLight.setFlashing(color, KEYBOARD_LIGHT_IGNORE_MODE, 0, 0);
+    }
+
+    private void updateKeyboardLightState()
+    {
+        int state = KEYBOARD_LIGHT_IGNORE_VALUE;
+        if (mKeyboardVisible) {
+            state = state | KEYBOARD_LIGHT_ENABLED;
+        }
+        if (!mAutoBrightessEnabled || !mAutoBrightnessButtonKeyboard) {
+            state = state | KEYBOARD_LIGHT_FOLLOWS_SCREEN;
+        }
+        mKeyboardLight.setFlashing(0, state, 0, 0);
     }
 
     private void setPowerState(int state)
@@ -2300,7 +2325,7 @@ public class PowerManagerService extends IPowerManager.Stub
                         }
 
                         if ((mask & KEYBOARD_BRIGHT_BIT) != 0) {
-                            mKeyboardLight.setBrightness(mLightSensorKeyboardBrightness >= 0 && value > 0 ?
+                            setKeyboardLightBrightness(mLightSensorKeyboardBrightness >= 0 && value > 0 ?
                                     mLightSensorKeyboardBrightness : value);
                         }
 
@@ -2317,7 +2342,7 @@ public class PowerManagerService extends IPowerManager.Stub
                             mButtonLight.setBrightness(value);
                         }
                         if ((mask & KEYBOARD_BRIGHT_BIT) != 0) {
-                            mKeyboardLight.setBrightness(value);
+                            setKeyboardLightBrightness(value);
                         }
 
                         if (elapsed > 100) {
@@ -2419,11 +2444,6 @@ public class PowerManagerService extends IPowerManager.Stub
                     // We only animate keyboard and button when passed in with SCREEN_BRIGHT_BIT.
                     if ((mask & BUTTON_BRIGHT_BIT) != 0) {
                         mButtonLight.setBrightness(target);
-                    }
-                    // Keyboard backlight is synced with display, allow only toggling it on from here
-                    // for cases when keyboard was already visible
-                    if ((mask & KEYBOARD_BRIGHT_BIT) != 0 && target > 0) {
-                        mKeyboardLight.setBrightness(255);
                     }
                     return;
                 }
@@ -3016,7 +3036,7 @@ public class PowerManagerService extends IPowerManager.Stub
                     mButtonLight.setBrightness(buttonValue);
                 }
                 if ((mButtonBrightnessOverride < 0 || !mKeyboardVisible) && mAutoBrightnessButtonKeyboard) {
-                    mKeyboardLight.setBrightness(keyboardValue);
+                    setKeyboardLightBrightness(keyboardValue);
                 }
             }
         }
@@ -3176,7 +3196,7 @@ public class PowerManagerService extends IPowerManager.Stub
                     userActivity(SystemClock.uptimeMillis(), false, BUTTON_EVENT, true);
                 }
 
-                mKeyboardLight.setBrightness(mKeyboardVisible ? 255 : 0);
+                updateKeyboardLightState();
             }
         }
     }
@@ -3203,6 +3223,7 @@ public class PowerManagerService extends IPowerManager.Stub
         boolean enabled = (mode == SCREEN_BRIGHTNESS_MODE_AUTOMATIC);
         if (mUseSoftwareAutoBrightness && mAutoBrightessEnabled != enabled) {
             mAutoBrightessEnabled = enabled;
+            updateKeyboardLightState();
             enableLightSensorLocked(mAutoBrightessEnabled);
             if (isScreenOn()) {
                 // force recompute of backlight values
@@ -3559,7 +3580,7 @@ public class PowerManagerService extends IPowerManager.Stub
         synchronized (mLocks) {
             brightness = Math.max(brightness, mScreenDim);
             mLcdLight.setBrightness(brightness);
-            mKeyboardLight.setBrightness(mKeyboardVisible ? brightness : 0);
+            setKeyboardLightBrightness(brightness);
             mButtonLight.setBrightness(brightness);
             long identity = Binder.clearCallingIdentity();
             try {

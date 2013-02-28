@@ -358,6 +358,22 @@ public class QwertyKeyListener extends BaseKeyListener {
         return super.onKeyDown(view, content, keyCode, event);
     }
 
+    protected void press(Editable content, Object what) {
+        int state = content.getSpanFlags(what);
+
+        if (state == PRESSED)
+            ; // repeat before use
+        else if (state == RELEASED)
+            // we don't need to lock anything
+            content.setSpan(what, 0, 0, PRESSED);
+        else if (state == USED)
+            ; // repeat after use
+        else if (state == LOCKED)
+            content.removeSpan(what);
+        else
+            content.setSpan(what, 0, 0, PRESSED);
+    }
+
     private String getReplacement(CharSequence src, int start, int end,
                                   View view) {
         int len = end - start;

@@ -283,7 +283,7 @@ public abstract class MetaKeyKeyListener {
         return false; // no super to call through to
     }
 
-    private void press(Editable content, Object what) {
+    protected void press(Editable content, Object what) {
         int state = content.getSpanFlags(what);
 
         if (state == PRESSED)
@@ -338,7 +338,7 @@ public abstract class MetaKeyKeyListener {
         return false; // no super to call through to
     }
 
-    private void release(Editable content, Object what, KeyEvent event) {
+    protected void release(Editable content, Object what, KeyEvent event) {
         int current = content.getSpanFlags(what);
 
         switch (event.getKeyCharacterMap().getModifierBehavior()) {
@@ -576,27 +576,27 @@ public abstract class MetaKeyKeyListener {
     /**
      * The meta key has been pressed but has not yet been used.
      */
-    private static final int PRESSED = 
+    protected static final int PRESSED =
         Spannable.SPAN_MARK_MARK | (1 << Spannable.SPAN_USER_SHIFT);
 
     /**
      * The meta key has been pressed and released but has still
      * not yet been used.
      */
-    private static final int RELEASED = 
+    protected static final int RELEASED =
         Spannable.SPAN_MARK_MARK | (2 << Spannable.SPAN_USER_SHIFT);
 
     /**
      * The meta key has been pressed and used but has not yet been released.
      */
-    private static final int USED = 
+    protected static final int USED =
         Spannable.SPAN_MARK_MARK | (3 << Spannable.SPAN_USER_SHIFT);
 
     /**
      * The meta key has been pressed and released without use, and then
      * pressed again; it may also have been released again.
      */
-    private static final int LOCKED = 
+    protected static final int LOCKED =
         Spannable.SPAN_MARK_MARK | (4 << Spannable.SPAN_USER_SHIFT);
 }
 

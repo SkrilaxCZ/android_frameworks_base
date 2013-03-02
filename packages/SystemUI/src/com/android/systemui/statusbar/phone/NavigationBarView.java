@@ -79,7 +79,7 @@ public class NavigationBarView extends LinearLayout {
     int mBarSize;
     boolean mVertical;
 
-    boolean mHidden, mLowProfile, mShowMenu;
+    boolean mHidden, mLowProfile, mShowMenu, mHaveMenu;
     int mDisabledFlags = 0;
     int mNavigationIconHints = 0;
 
@@ -220,6 +220,9 @@ public class NavigationBarView extends LinearLayout {
                     }
                     ((ViewGroup) mCurrentView.findViewById(R.id.mid_nav_buttons)).setLayoutTransition(
                             new LayoutTransition());
+                    mHaveMenu = (mCurrentView.findViewWithTag(NavbarEditor.NAVBAR_MENU_BIG) != null);
+                    if (mHaveMenu)
+                        setButtonWithTagVisibility(NavbarEditor.NAVBAR_CONDITIONAL_MENU, View.INVISIBLE);
                 }
             }
         }
@@ -328,7 +331,10 @@ public class NavigationBarView extends LinearLayout {
 
         mShowMenu = show;
 
-        setButtonWithTagVisibility(NavbarEditor.NAVBAR_CONDITIONAL_MENU, mShowMenu ? View.VISIBLE : View.INVISIBLE);
+        // do not show conditional menu if we have it already on the navbar
+        if (EDIT_MODE || !mHaveMenu) {
+            setButtonWithTagVisibility(NavbarEditor.NAVBAR_CONDITIONAL_MENU, show ? View.VISIBLE : View.INVISIBLE);
+        }
     }
 
     public void setLowProfile(final boolean lightsOut) {
@@ -420,6 +426,10 @@ public class NavigationBarView extends LinearLayout {
         mEditBar.updateKeys();
         mEditBar.updateLowLights(mCurrentView);
         toggleButtonListener(true);
+        mHaveMenu = (mCurrentView.findViewWithTag(NavbarEditor.NAVBAR_MENU_BIG) != null);
+        if (mHaveMenu && mShowMenu) {
+           setButtonWithTagVisibility(NavbarEditor.NAVBAR_CONDITIONAL_MENU, View.INVISIBLE);
+        }
 
         // force the low profile & disabled states into compliance
         setLowProfile(mLowProfile, false, true /* force */);

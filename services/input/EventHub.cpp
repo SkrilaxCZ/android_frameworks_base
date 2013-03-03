@@ -20,6 +20,7 @@
 
 #include "EventHub.h"
 
+#include <hardware/hardware.h>
 #include <hardware_legacy/power.h>
 
 #include <cutils/properties.h>
@@ -62,6 +63,9 @@
 #define INDENT "  "
 #define INDENT2 "    "
 #define INDENT3 "      "
+
+/* for built in keyboard caps lock key */
+#define LIGHT_ID_SHIFTKEY "shift"
 
 namespace android {
 
@@ -153,7 +157,7 @@ EventHub::EventHub(void) :
         mOpeningDevices(0), mClosingDevices(0),
         mNeedToSendFinishedDeviceScan(false),
         mNeedToReopenDevices(false), mNeedToScanDevices(true),
-        mPendingEventCount(0), mPendingEventIndex(0), mPendingINotify(false) {
+        mPendingEventCount(0), mPendingEventIndex(0), mPendingINotify(false), mCapsLockDevice(NULL) {
     acquire_wake_lock(PARTIAL_WAKE_LOCK, WAKE_LOCK_ID);
 
     mNumCpus = sysconf(_SC_NPROCESSORS_ONLN);
@@ -474,6 +478,9 @@ bool EventHub::hasLed(int32_t deviceId, int32_t led) const {
         if (test_bit(led, device->ledBitmask)) {
             return true;
         }
+        if (device->id == mBuiltInKeyboardId && mCapsLockDevice != NULL && led == LED_CAPSL) {
+          return true;
+        }
     }
     return false;
 }
@@ -493,6 +500,19 @@ void EventHub::setLedState(int32_t deviceId, int32_t led, bool on) {
         do {
             nWrite = write(device->fd, &ev, sizeof(struct input_event));
         } while (nWrite == -1 && errno == EINTR);
+
+        // Additionally lit built-in keyboard caps lock led via lib lights
+        if (device->id == mBuiltInKeyboardId && mCapsLockDevice != NULL && led == LED_CAPSL) {
+            light_state_t state;
+
+            memset(&state, 0, sizeof(light_state_t));
+            state.color = on ? 0xffffffff /* 255 */ : 0xff000000 /* 0 */;
+            state.flashMode = LIGHT_FLASH_NONE;
+            state.flashOnMS = 0;
+            state.flashOffMS = 0;
+            state.brightnessMode = 0;
+            mCapsLockDevice->set_light(mCapsLockDevice, &state);
+        }
     }
 }
 
@@ -1038,6 +1058,22 @@ status_t EventHub::openDeviceLocked(const char *devicePath) {
                 && isEligibleBuiltInKeyboard(device->identifier,
                         device->configuration, &device->keyMap)) {
             mBuiltInKeyboardId = device->id;
+
+            // Register lights device for caps lock led if available
+            hw_module_t* module;
+            hw_device_t* device;
+            int err = hw_get_module(LIGHTS_HARDWARE_MODULE_ID, (hw_module_t const**)&module);
+
+            if (err == 0) {
+                err = module->methods->open(module, LIGHT_ID_SHIFTKEY, &device);
+                if (err == 0) {
+                    mCapsLockDevice = (light_device_t*)device;
+                }
+            }
+
+            if (err != 0) {
+                ALOGE("Could not register caps lock key lights device.\n");
+            }
         }
 
         // 'Q' key support = cheap test of whether this is an alpha-capable kbd
@@ -1188,6 +1224,11 @@ void EventHub::closeDeviceLocked(Device* device) {
         LOGW("built-in keyboard device %s (id=%d) is closing! the apps will not like this",
                 device->path.string(), mBuiltInKeyboardId);
         mBuiltInKeyboardId = -1;
+
+        if (mCapsLockDevice != NULL && mCapsLockDevice->common.close != NULL) {
+            mCapsLockDevice->common.close((struct hw_device_t*)mCapsLockDevice);
+        }
+        mCapsLockDevice = NULL;
     }
 
     if (epoll_ctl(mEpollFd, EPOLL_CTL_DEL, device->fd, NULL)) {

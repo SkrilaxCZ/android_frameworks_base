@@ -36,6 +36,8 @@
 #include <linux/input.h>
 #include <sys/epoll.h>
 
+#include <hardware/lights.h>
+
 /* Convenience constants. */
 
 #define BTN_FIRST 0x100  // first button scancode
@@ -371,6 +373,9 @@ private:
     size_t mPendingEventCount;
     size_t mPendingEventIndex;
     bool mPendingINotify;
+
+    // For builtin keyboard capslock
+    light_device_t* mCapsLockDevice;
 
     // Set to the number of CPUs.
     int32_t mNumCpus;

@@ -2999,6 +2999,8 @@ public class PowerManagerService extends IPowerManager.Stub
                     }
                     userActivity(SystemClock.uptimeMillis(), false, BUTTON_EVENT, true);
                 }
+
+                mKeyboardLight.setBrightness(mKeyboardVisible ? 255 : 0);
             }
         }
     }

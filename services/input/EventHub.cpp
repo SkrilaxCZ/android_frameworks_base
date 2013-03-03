@@ -1072,7 +1072,7 @@ status_t EventHub::openDeviceLocked(const char *devicePath) {
             }
 
             if (err != 0) {
-                ALOGE("Could not register caps lock key lights device.\n");
+                LOGE("Could not register caps lock key lights device.\n");
             }
         }
 
